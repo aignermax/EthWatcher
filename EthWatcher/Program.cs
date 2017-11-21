@@ -3,12 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EthWatcher
 {
-
+    
     public class CoinMarketCapResponse
     {
         public string id { get; set; }
@@ -19,30 +21,45 @@ namespace EthWatcher
         public double price_eur { get; set; }
         public double price_btc { get; set; }
     }
+
     public class Program
     {
-        static string LinkEthData = "https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=10";
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetConsoleWindow();
 
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        const int SW_HIDE = 0;
+        const int SW_SHOW = 5;
+        static string LinkEthData = "https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=10";
         static void Main(string[] args)
         {
-            using (WebClient wc = new WebClient())
+
+            // hide console window
+            var handle = GetConsoleWindow();
+            ShowWindow(handle, SW_HIDE);
+            while (true)
             {
-                var json = wc.DownloadString(LinkEthData);
-                List<CoinMarketCapResponse> result = JsonConvert.DeserializeObject<List<CoinMarketCapResponse>>(json);
-                foreach( CoinMarketCapResponse c in result)
+                using (WebClient wc = new WebClient())
                 {
-                    if(c.id == "ethereum")
+                    var json = wc.DownloadString(LinkEthData);
+                    List<CoinMarketCapResponse> result = JsonConvert.DeserializeObject<List<CoinMarketCapResponse>>(json);
+                    foreach (CoinMarketCapResponse c in result)
                     {
-                        if (c.price_eur > 1000)
+                        if (c.id == "ethereum")
                         {
-                            Console.WriteLine("Ether is over 1000 Euro");
-                            Console.ReadLine();
+                            if (c.price_eur > 1000)
+                            {
+                                ShowWindow(handle, SW_SHOW);
+                                Console.WriteLine("Ether is over 1000 Euro");
+                                Console.ReadLine();
+                            }
                         }
                     }
                 }
-                
+                Thread.Sleep(600 * 1000); // check all 10 seconds
             }
-            
         }
     }
 }
